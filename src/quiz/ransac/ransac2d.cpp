@@ -61,15 +61,126 @@ pcl::visualization::PCLVisualizer::Ptr initScene()
   	return viewer;
 }
 
+void print(std::vector<unsigned int> const &input)
+{
+	for (int i = 0; i < input.size(); i++) {
+		std::cout << input.at(i) << ' ';
+	}
+}
+
+std::unordered_set<int> Ransac2D(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+{
+	std::unordered_set<int> inliersResult;
+	srand(time(NULL));
+	
+	// TODO: Fill in this function
+	// For max iterations 
+	std::cout << "Points Count is " << cloud->points.size() << std::endl;
+	while (maxIterations--){
+		std::unordered_set<int> inliers;
+
+
+		std::vector<unsigned int> subsampleIndices(cloud->points.size());
+		std::iota(subsampleIndices.begin(), subsampleIndices.end(), 0);
+		// print(subsampleIndices);
+		std::random_shuffle(subsampleIndices.begin(), subsampleIndices.end());
+		// print(subsampleIndices);
+		pcl::PointXYZ point1 = cloud->points[subsampleIndices[0]];
+		pcl::PointXYZ point2 = cloud->points[subsampleIndices[1]];
+		std::cout << "Iteration " << maxIterations << " indices are " << subsampleIndices[0] << " and " << subsampleIndices[1] << "." << std::endl;
+		
+		inliers.insert(subsampleIndices[0]);
+		inliers.insert(subsampleIndices[1]);
+
+		float A = point1.y - point2.y + 0.0f;
+		float B = point2.x - point1.x + 0.0f;
+		float C = 1.0f * point1.x * point2.y - 1.0f * point2.x * point1.y;
+
+		std::cout << "A = " << A << ", B = " << B << ", C = " << C << ". " << std::endl;
+
+		for(int index = 0; index < cloud->points.size(); index++){
+			if(index == subsampleIndices[0] || index == subsampleIndices[1]) continue;
+
+			pcl::PointXYZ point = cloud->points[index];
+
+			float Dist = fabs(A*point.x + B*point.y + C) / sqrt(A*A + B*B);
+
+			// std::cout << "D = " << Dist << " ";
+
+			if(Dist <= distanceTol)
+				inliers.insert(index);
+			
+		}
+		std::cout << "inliers count is " << inliers.size() << ". " << std::endl;
+
+		if(inliersResult.size() < inliers.size())
+			inliersResult = inliers;
+
+		inliers.clear();
+
+	}
+	// Randomly sample subset and fit line
+
+	// Measure distance between every point and fitted line
+	// If distance is smaller than threshold count it as inlier
+
+	// Return indicies of inliers from fitted line with most inliers
+	
+	return inliersResult;
+
+}
+
 std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
 {
 	std::unordered_set<int> inliersResult;
 	srand(time(NULL));
 	
 	// TODO: Fill in this function
-
 	// For max iterations 
+	std::cout << "Points Count is " << cloud->points.size() << std::endl;
+	while (maxIterations--){
+		std::unordered_set<int> inliers;
 
+
+		std::vector<unsigned int> subsampleIndices(cloud->points.size());
+		std::iota(subsampleIndices.begin(), subsampleIndices.end(), 0);
+		// print(subsampleIndices);
+		std::random_shuffle(subsampleIndices.begin(), subsampleIndices.end());
+		// print(subsampleIndices);
+		pcl::PointXYZ point1 = cloud->points[subsampleIndices[0]];
+		pcl::PointXYZ point2 = cloud->points[subsampleIndices[1]];
+		std::cout << "Iteration " << maxIterations << " indices are " << subsampleIndices[0] << " and " << subsampleIndices[1] << "." << std::endl;
+		
+		inliers.insert(subsampleIndices[0]);
+		inliers.insert(subsampleIndices[1]);
+
+		float A = point1.y - point2.y + 0.0f;
+		float B = point2.x - point1.x + 0.0f;
+		float C = 1.0f * point1.x * point2.y - 1.0f * point2.x * point1.y;
+
+		std::cout << "A = " << A << ", B = " << B << ", C = " << C << ". " << std::endl;
+
+		for(int index = 0; index < cloud->points.size(); index++){
+			if(index == subsampleIndices[0] || index == subsampleIndices[1]) continue;
+
+			pcl::PointXYZ point = cloud->points[index];
+
+			float Dist = fabs(A*point.x + B*point.y + C) / sqrt(A*A + B*B);
+
+			// std::cout << "D = " << Dist << " ";
+
+			if(Dist <= distanceTol)
+				inliers.insert(index);
+			
+		}
+		std::cout << "inliers count is " << inliers.size() << ". " << std::endl;
+
+		if(inliersResult.size() < inliers.size())
+			inliersResult = inliers;
+
+		inliers.clear();
+
+	}
 	// Randomly sample subset and fit line
 
 	// Measure distance between every point and fitted line
@@ -92,7 +203,7 @@ int main ()
 	
 
 	// TODO: Change the max iteration and distance tolerance arguments for Ransac function
-	std::unordered_set<int> inliers = Ransac(cloud, 0, 0);
+	std::unordered_set<int> inliers = Ransac(cloud, 50, 1.0);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr  cloudInliers(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOutliers(new pcl::PointCloud<pcl::PointXYZ>());
