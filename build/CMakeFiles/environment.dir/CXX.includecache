@@ -21,6 +21,8 @@ processPointClouds.h
 /home/aomran/SFND_Lidar_Obstacle_Detection/src/processPointClouds.h
 unordered_set
 -
+quiz/cluster/kdtree.h
+/home/aomran/SFND_Lidar_Obstacle_Detection/src/quiz/cluster/kdtree.h
 
 /home/aomran/SFND_Lidar_Obstacle_Detection/src/processPointClouds.h
 pcl/io/pcd_io.h
@@ -53,6 +55,10 @@ chrono
 -
 render/box.h
 /home/aomran/SFND_Lidar_Obstacle_Detection/src/render/box.h
+
+/home/aomran/SFND_Lidar_Obstacle_Detection/src/quiz/cluster/kdtree.h
+../../render/render.h
+/home/aomran/SFND_Lidar_Obstacle_Detection/src/render/render.h
 
 /home/aomran/SFND_Lidar_Obstacle_Detection/src/render/box.h
 Eigen/Geometry

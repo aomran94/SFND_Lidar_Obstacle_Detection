@@ -2,6 +2,7 @@
 
 #include "processPointClouds.h"
 #include <unordered_set>
+#include "quiz/cluster/kdtree.h"
 //#include "quiz/ransac/ransac2d.cpp"
 
 
@@ -30,6 +31,8 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     auto startTime = std::chrono::steady_clock::now();
 
     // TODO:: Fill in the function to do voxel grid point reduction and region based filtering
+    
+
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -150,6 +153,26 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     return segResult;
 }
 
+inline void proximity(std::vector<int>* cluster, int index, const std::vector<std::vector<float>> points, KdTree3D* tree, float distanceTol, std::vector<bool>* visited){
+	if(visited->at(index)) return;
+	std::vector<int> prox = tree->search(points[index], distanceTol);
+	visited->at(index) = true;
+	for(int i : prox)
+		if(!visited->at(i)) {
+			cluster->push_back(i);
+			proximity(cluster, i, points, tree, distanceTol, visited);
+		}
+}
+
+inline bool lessX(const std::vector<float>& a, const std::vector<float>& b){
+    return a[0] <= b[0];
+}
+inline bool lessY(const std::vector<float>& a, const std::vector<float>& b){
+    return a[1] <= b[1];
+}
+inline bool lessZ(const std::vector<float>& a, const std::vector<float>& b){
+    return a[2] <= b[2];
+}
 
 template<typename PointT>
 std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::Clustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
@@ -157,16 +180,51 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
     // Time clustering process
     auto startTime = std::chrono::steady_clock::now();
-
-    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
-
     // TODO:: Fill in the function to perform euclidean clustering to group detected obstacles
+    
+    std::vector<std::vector<float>> points;
+    for(int i=0; i<cloud->points.size(); i++){
+        std::vector<float> tmpPoint;
+        tmpPoint.push_back(cloud->points[i].x); tmpPoint.push_back(cloud->points[i].y); tmpPoint.push_back(cloud->points[i].z);
+        points.push_back(tmpPoint);
+    }
 
+    KdTree3D* tree = new KdTree3D;
+    std::vector<std::vector<float>> pointsCopy(points); 
+    int Dim=0;
+    while(!pointsCopy.empty()){
+        std::nth_element(pointsCopy.begin(), pointsCopy.begin() + pointsCopy.size()/2, pointsCopy.end(), (Dim%3==0)?lessX:((Dim%3==1)?lessY:lessZ));
+        std::vector<float> medianPoint = pointsCopy[pointsCopy.size()/2];
+        int originalIndex = std::find(points.begin(), points.end(), medianPoint) - points.begin();
+        tree->insert(medianPoint, originalIndex);
+        pointsCopy.erase(pointsCopy.begin() + pointsCopy.size()/2);
+        Dim++;
+    }
+    
+	std::vector<std::vector<int>> clusters;
+	std::vector<bool> visited(points.size(), false);
+	for(int i=0; i<points.size(); i++){
+		if(visited[i]) continue;
+		std::vector<int> cluster;
+		cluster.push_back(i);
+		proximity(&cluster, i, points, tree, clusterTolerance, &visited);
+		clusters.push_back(cluster);
+	}
+	
+	
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "clustering took " << elapsedTime.count() << " milliseconds and found " << clusters.size() << " clusters" << std::endl;
 
-    return clusters;
+    std::vector<typename pcl::PointCloud<pcl::PointXYZ>::Ptr> clusterClouds;
+    for (std::vector<int> cluster : clusters){
+        typename pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud (new pcl::PointCloud<pcl::PointXYZ>());
+        for(int point : cluster)
+            clusterCloud->points.push_back(pcl::PointXYZ(points[point][0], points[point][1], points[point][2]));
+        clusterClouds.push_back(clusterCloud);
+    }
+
+    return clusterClouds;
 }
 
 

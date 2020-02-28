@@ -76,11 +76,75 @@ struct KdTree
 		return ids;
 	}
 
+};
+
+struct KdTree3D
+{
+	Node* root;
+
+	KdTree3D()
+	: root(NULL)
+	{}
 
 
+	void insertHelper(Node** node, uint depth, std::vector<float> point, int id){
+		if(*node == NULL)
+			*node = new Node(point, id);
+		else {
+			if(point[depth%3] < (*node)->point[depth%3])
+				insertHelper(&((*node)->left), depth+1, point, id);
+			else
+				insertHelper(&((*node)->right), depth+1, point, id);
+		}
+	}
+
+	void insert(std::vector<float> point, int id)
+	{
+		// TODO: Fill in this function to insert a new point into the tree
+		// the function should create a new node and place correctly with in the root 
+		insertHelper(&root, 0, point, id);
+
+	}
 
 
 	
+	bool checkWithinBox(std::vector<float> p, std::vector<float> q, float d){
+		return fabs(p[0]-q[0]) <= d && fabs(p[1]-q[1]) <= d && fabs(p[2]-q[2]) <= d;
+	}
+	bool checkWithinCircle(std::vector<float> p, std::vector<float> q, float d){
+		return sqrt((p[0]-q[0])*(p[0]-q[0]) + (p[1]-q[1])*(p[1]-q[1]) + (p[2]-q[2])*(p[2]-q[2])) <= d;
+	}
+
+	void searchHelper(std::vector<float> target, Node* node, uint depth, float distanceTol, std::vector<int>* ids){
+
+		if(node == NULL) return;
+
+		if(checkWithinBox(target, node->point, distanceTol) && checkWithinCircle(target, node->point, distanceTol))
+			ids->push_back(node->id);
+		
+		if(target[depth%3] - distanceTol < node->point[depth%3])
+			searchHelper(target, node->left, depth+1, distanceTol, ids);
+		if(target[depth%3] + distanceTol >= node->point[depth%3])
+			searchHelper(target, node->right, depth+1, distanceTol, ids);
+
+	}
+
+	// return a list of point ids in the tree that are within distance of target
+	std::vector<int> search(std::vector<float> target, float distanceTol)
+	{
+		std::vector<int> ids;
+		searchHelper(target, root, 0, distanceTol, &ids);
+		return ids;
+	}
+
+	int count(){
+		return countHelper(root);
+	}
+
+	int countHelper(Node* node){
+		if(node == NULL) return 0;
+		return 1 + countHelper(node->left) + countHelper(node->right);
+	}
 
 };
 
